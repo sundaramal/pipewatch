@@ -1,4 +1,4 @@
-"""Registry for check classes, keyed by string type names."""
+"""Registry mapping check-type strings to :class:`BaseCheck` subclasses."""
 
 from __future__ import annotations
 
@@ -6,42 +6,43 @@ from typing import Dict, List, Type
 
 from pipewatch.checks.base import BaseCheck
 
-_REGISTRY: Dict[str, Type[BaseCheck]] = {}
+_registry: Dict[str, Type[BaseCheck]] = {}
 
 
 def register(name: str, cls: Type[BaseCheck]) -> None:
-    """Register *cls* under *name*."""
-    _REGISTRY[name] = cls
+    """Register *cls* under the given *name*."""
+    _registry[name] = cls
 
 
 def get(name: str) -> Type[BaseCheck]:
-    """Return the class registered under *name*.
+    """Return the class registered as *name*.
 
     Raises
     ------
     KeyError
-        If no check is registered with the given name.
+        If *name* has not been registered.
     """
-    try:
-        return _REGISTRY[name]
-    except KeyError:
-        raise KeyError(f"No check registered with name '{name}'") from None
+    if name not in _registry:
+        raise KeyError(f"No check registered with name '{name}'")
+    return _registry[name]
 
 
 def available() -> List[str]:
-    """Return a sorted list of all registered check type names."""
-    return sorted(_REGISTRY.keys())
+    """Return a sorted list of all registered check names."""
+    return sorted(_registry.keys())
 
 
 def register_builtins() -> None:
-    """Register all built-in and bundled check types."""
+    """Populate the registry with all built-in check types."""
     from pipewatch.checks.builtin import FreshnessCheck, ThresholdCheck
     from pipewatch.checks.composite import CompositeCheck
-    from pipewatch.checks.timeout import TimeoutCheck
+    from pipewatch.checks.conditional import ConditionalCheck  # noqa: F401 – side-effect import
     from pipewatch.checks.retry import RetryCheck
+    from pipewatch.checks.timeout import TimeoutCheck
 
     register("threshold", ThresholdCheck)
     register("freshness", FreshnessCheck)
     register("composite", CompositeCheck)
-    register("timeout", TimeoutCheck)
     register("retry", RetryCheck)
+    register("timeout", TimeoutCheck)
+    register("conditional", ConditionalCheck)
