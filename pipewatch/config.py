@@ -34,6 +34,10 @@ class PipelineConfig:
     pipeline: str
     checks: list[CheckConfig] = field(default_factory=list)
 
+    def get_check(self, name: str) -> CheckConfig | None:
+        """Return the first check with the given name, or None if not found."""
+        return next((c for c in self.checks if c.name == name), None)
+
 
 def load_config(path: str | Path) -> PipelineConfig:
     """Load and validate a YAML pipeline configuration file.
