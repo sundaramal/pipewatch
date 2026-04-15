@@ -1,43 +1,50 @@
-"""Registry for mapping check type names to check classes."""
+"""Registry mapping check-type strings to BaseCheck subclasses."""
+from __future__ import annotations
 
-from typing import Dict, Type
+from typing import Dict, List, Type
+
 from pipewatch.checks.base import BaseCheck
 
-_REGISTRY: Dict[str, Type[BaseCheck]] = {}
+_registry: Dict[str, Type[BaseCheck]] = {}
 
 
-def register(name: str, check_cls: Type[BaseCheck]) -> None:
-    """Register a check class under the given type name."""
-    if not issubclass(check_cls, BaseCheck):
-        raise TypeError(f"{check_cls} must be a subclass of BaseCheck")
-    _REGISTRY[name] = check_cls
+def register(type_name: str, cls: Type[BaseCheck]) -> None:
+    """Register *cls* under *type_name*.
 
-
-def get(name: str) -> Type[BaseCheck]:
-    """Retrieve a check class by type name.
-
-    Raises KeyError if the name is not registered.
+    Raises ``ValueError`` if the name is already taken by a different class.
     """
-    if name not in _REGISTRY:
-        raise KeyError(
-            f"Unknown check type: '{name}'. "
-            f"Available types: {sorted(_REGISTRY.keys())}"
+    existing = _registry.get(type_name)
+    if existing is not None and existing is not cls:
+        raise ValueError(
+            f"Check type '{type_name}' is already registered by {existing!r}."
         )
-    return _REGISTRY[name]
+    _registry[type_name] = cls
 
 
-def available() -> list:
-    """Return a sorted list of all registered check type names."""
-    return sorted(_REGISTRY.keys())
+def get(type_name: str) -> Type[BaseCheck]:
+    """Return the class registered under *type_name*.
+
+    Raises ``KeyError`` if the type is not registered.
+    """
+    try:
+        return _registry[type_name]
+    except KeyError:
+        raise KeyError(
+            f"Unknown check type '{type_name}'. "
+            f"Available types: {available()}"
+        ) from None
+
+
+def available() -> List[str]:
+    """Return a sorted list of all registered type names."""
+    return sorted(_registry)
 
 
 def register_builtins() -> None:
-    """Register all built-in check types."""
-    from pipewatch.checks.builtin import ThresholdCheck, FreshnessCheck
+    """Register all built-in check types (idempotent)."""
+    from pipewatch.checks.builtin import FreshnessCheck, ThresholdCheck
+    from pipewatch.checks.composite import CompositeCheck
 
     register("threshold", ThresholdCheck)
     register("freshness", FreshnessCheck)
-
-
-# Auto-register builtins when this module is imported
-register_builtins()
+    register("composite", CompositeCheck)
