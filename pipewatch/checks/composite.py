@@ -28,7 +28,7 @@ class CompositeCheck(BaseCheck):
         failed = [r for r in results if not r.passed]
         overall_passed = len(failed) == 0
 
-        lines = [f"  [{'+' if r.passed else 'x'}] {r.name}: {r.detail}" for r in results]
+        lines = [f"  [{'+'  if r.passed else 'x'}] {r.name}: {r.detail}" for r in results]
         detail = "All sub-checks passed." if overall_passed else (
             f"{len(failed)} of {len(results)} sub-check(s) failed:\n" + "\n".join(lines)
         )
@@ -47,3 +47,18 @@ class CompositeCheck(BaseCheck):
     def checks(self) -> List[BaseCheck]:
         """Read-only view of the sub-checks."""
         return list(self._checks)
+
+    def add_check(self, check: BaseCheck) -> None:
+        """Append a sub-check to the collection.
+
+        Args:
+            check: A :class:`BaseCheck` instance to add.
+
+        Raises:
+            TypeError: If *check* is not a :class:`BaseCheck` instance.
+        """
+        if not isinstance(check, BaseCheck):
+            raise TypeError(
+                f"Expected a BaseCheck instance, got {type(check).__name__!r}."
+            )
+        self._checks.append(check)
