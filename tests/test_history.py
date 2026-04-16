@@ -87,3 +87,14 @@ def test_load_skips_corrupt_lines(store: HistoryStore) -> None:
     store.path.write_text("not json\n{\"bad\": true}\n", encoding="utf-8")
     entries = store.load()
     assert entries == []
+
+
+def test_load_limit_returns_most_recent(store: HistoryStore) -> None:
+    """Entries returned by limit should be the most recently recorded ones."""
+    for i in range(5):
+        store.record(_make_report(i, 0), pipeline="p")
+    entries = store.load(limit=2)
+    assert len(entries) == 2
+    # The last two entries should have total counts of 3 and 4 (i=3 and i=4).
+    totals = [e.total for e in entries]
+    assert totals == [4, 3] or totals == [3, 4]
