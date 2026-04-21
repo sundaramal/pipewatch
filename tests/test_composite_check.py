@@ -22,41 +22,50 @@ class _FailCheck(BaseCheck):
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _make_composite(*checks: BaseCheck, name: str = "composite") -> CompositeCheck:
+    """Convenience factory to reduce boilerplate in test bodies."""
+    return CompositeCheck(name, list(checks))
+
+
+# ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 
 def test_composite_passes_when_all_sub_checks_pass():
-    check = CompositeCheck("all_good", [_PassCheck("p1"), _PassCheck("p2")])
+    check = _make_composite(_PassCheck("p1"), _PassCheck("p2"), name="all_good")
     result = check.run()
     assert result.passed is True
 
 
 def test_composite_fails_when_any_sub_check_fails():
-    check = CompositeCheck("mixed", [_PassCheck("p1"), _FailCheck("f1")])
+    check = _make_composite(_PassCheck("p1"), _FailCheck("f1"), name="mixed")
     result = check.run()
     assert result.passed is False
 
 
 def test_composite_fails_when_all_sub_checks_fail():
-    check = CompositeCheck("all_bad", [_FailCheck("f1"), _FailCheck("f2")])
+    check = _make_composite(_FailCheck("f1"), _FailCheck("f2"), name="all_bad")
     result = check.run()
     assert result.passed is False
 
 
 def test_composite_detail_mentions_failure_count():
-    check = CompositeCheck("mixed", [_PassCheck("p1"), _FailCheck("f1"), _FailCheck("f2")])
+    check = _make_composite(_PassCheck("p1"), _FailCheck("f1"), _FailCheck("f2"), name="mixed")
     result = check.run()
     assert "2 of 3" in result.detail
 
 
 def test_composite_detail_all_pass_message():
-    check = CompositeCheck("all_good", [_PassCheck("p1")])
+    check = _make_composite(_PassCheck("p1"), name="all_good")
     result = check.run()
     assert "All sub-checks passed" in result.detail
 
 
 def test_composite_name_is_preserved():
-    check = CompositeCheck("my_composite", [_PassCheck("p1")])
+    check = _make_composite(_PassCheck("p1"), name="my_composite")
     result = check.run()
     assert result.name == "my_composite"
 
@@ -77,12 +86,12 @@ def test_composite_raises_on_empty_checks():
 
 
 def test_composite_single_pass_check():
-    check = CompositeCheck("solo", [_PassCheck("only")])
+    check = _make_composite(_PassCheck("only"), name="solo")
     result = check.run()
     assert result.passed is True
 
 
 def test_composite_single_fail_check():
-    check = CompositeCheck("solo", [_FailCheck("only")])
+    check = _make_composite(_FailCheck("only"), name="solo")
     result = check.run()
     assert result.passed is False
