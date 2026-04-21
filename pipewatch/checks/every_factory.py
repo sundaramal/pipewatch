@@ -1,45 +1,74 @@
-"""Factory helper for building EveryCheck instances from param dicts."""
+"""Factory helper for building EveryCheck instances from parameter dicts.
+
+This module provides `build_every_from_params`, which constructs an
+EveryCheck from a nested configuration dictionary, delegating sub-check
+construction to the registry-based `build_check` factory.
+"""
+
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from pipewatch.checks.every import EveryCheck
 from pipewatch.checks.factory import CheckBuildError, build_check
 
 
-def build_every_from_params(params: Dict[str, Any]) -> EveryCheck:
-    """Construct an :class:`EveryCheck` from a params dict.
+def build_every_from_params(params: dict[str, Any]) -> EveryCheck:
+    """Build an EveryCheck from a parameter dictionary.
 
-    Expected params layout::
+    Expected params structure::
 
         {
-            "name": "optional-name",   # optional
-            "checks": [                 # required, non-empty list
-                {"type": "threshold", ...},
-                ...
-            ]
+            "checks": [
+                {"type": "threshold", "params": {"min": 0}},
+                {"type": "freshness", "params": {"max_age_seconds": 300}},
+            ],
+            "name": "my_every_check",   # optional
         }
 
-    Raises
-    ------
-    CheckBuildError
-        If *checks* key is missing, empty, or contains non-dict entries.
-    """
-    raw_checks = params.get("checks")
-    if not raw_checks:
-        raise CheckBuildError("EveryCheck requires a non-empty 'checks' list in params")
-    if not isinstance(raw_checks, list):
-        raise CheckBuildError("'checks' must be a list of check config dicts")
+    Args:
+        params: A dict containing at least a ``checks`` key whose value is a
+            non-empty list of sub-check configuration dicts.  An optional
+            ``name`` key may be provided for the composite check.
 
-    name = params.get("name", "every")
+    Returns:
+        A fully-constructed :class:`~pipewatch.checks.every.EveryCheck`.
+
+    Raises:
+        CheckBuildError: If ``checks`` is missing, empty, or contains invalid
+            entries.
+    """
+    if "checks" not in params:
+        raise CheckBuildError(
+            "EveryCheck requires a 'checks' key in params"
+        )
+
+    sub_check_cfgs = params["checks"]
+
+    if not sub_check_cfgs:
+        raise CheckBuildError(
+            "EveryCheck 'checks' list must not be empty"
+        )
+
+    name: str | None = params.get("name")
     every = EveryCheck(name=name)
 
-    for idx, entry in enumerate(raw_checks):
-        if not isinstance(entry, dict):
+    for idx, cfg in enumerate(sub_check_cfgs):
+        if not isinstance(cfg, dict):
             raise CheckBuildError(
-                f"Each entry in 'checks' must be a dict (got {type(entry)} at index {idx})"
+                f"EveryCheck sub-check at index {idx} must be a dict, "
+                f"got {type(cfg).__name__!r}"
             )
-        sub = build_check(entry)
-        every.add_check(sub)
+        if "type" not in cfg:
+            raise CheckBuildError(
+                f"EveryCheck sub-check at index {idx} is missing 'type' key"
+            )
+
+        sub_check = build_check(
+            check_type=cfg["type"],
+            name=cfg.get("name", f"{name or 'every'}_step_{idx}"),
+            params=cfg.get("params", {}),
+        )
+        every.add_check(sub_check)
 
     return every
