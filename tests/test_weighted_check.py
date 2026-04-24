@@ -74,10 +74,23 @@ def test_invalid_min_score_raises():
         WeightedCheck("w", {"min_score": 1.5})
 
 
+def test_invalid_min_score_negative_raises():
+    """min_score below 0.0 should also be rejected."""
+    with pytest.raises(ValueError):
+        WeightedCheck("w", {"min_score": -0.1})
+
+
 def test_invalid_weight_raises():
     wc = WeightedCheck("w")
     with pytest.raises(ValueError):
         wc.add_check(_PassCheck(), 0.0)
+
+
+def test_negative_weight_raises():
+    """Negative weights should be rejected just like zero weights."""
+    wc = WeightedCheck("w")
+    with pytest.raises(ValueError):
+        wc.add_check(_PassCheck(), -1.0)
 
 
 def test_message_contains_sub_check_names():
