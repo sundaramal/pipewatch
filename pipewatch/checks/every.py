@@ -26,6 +26,17 @@ class EveryCheck(BaseCheck):
         self._checks.append(check)
         return self
 
+    def remove_check(self, name: str) -> "EveryCheck":
+        """Remove the first sub-check whose name matches *name*.
+
+        Raises ``KeyError`` if no sub-check with that name exists.
+        """
+        for i, check in enumerate(self._checks):
+            if check.name == name:
+                del self._checks[i]
+                return self
+        raise KeyError(f"no sub-check named {name!r}")
+
     @property
     def checks(self) -> List[BaseCheck]:
         return list(self._checks)
